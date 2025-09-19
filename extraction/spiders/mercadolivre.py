@@ -24,8 +24,17 @@ class MercadoLivreSpider(scrapy.Spider):
             prices = product.css('span.andes-money-amount__fraction::text').getall()
             cents = product.css('span.andes-money-amount__cents::text').get()
 
-            ad_label = product.css('.ui-search-item__ad-label::text, .ui-search-item__ad-badge::text').get()
-            is_ad = bool(ad_label and ad_label.strip())
+            ad_text_candidates = product.css(
+                '.ui-search-item__ad-label::text, '
+                '.ui-search-item__ad-badge::text, '
+                '.ui-search-item__highlight-label::text, '
+                '.poly-component__label::text, '
+                '[data-testid="listing-highlight-label"]::text, '
+                '[data-testid="listing-type-highlight"]::text'
+            ).getall()
+
+            ad_texts = [candidate.strip() for candidate in ad_text_candidates if candidate and candidate.strip()]
+            is_ad = any('promocion' in text.lower() for text in ad_texts) or bool(ad_texts)
 
             price_value = None
             if prices:
