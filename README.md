@@ -11,6 +11,25 @@ Este proyecto aprovecha la biblioteca **Scrapy** de Python para realizar web scr
 
 ¡Si deseas recopilar datos de otro artículo, es totalmente posible!
 
+### Configuración rápida mediante `search_ui.py`
+
+Ejecuta la interfaz gráfica con
+
+```bash
+python search_ui.py
+```
+
+Podrás definir la búsqueda y la cantidad de páginas que quieres rastrear (entre 1 y 20). La información queda guardada en `config.json` con una estructura como la siguiente:
+
+```json
+{
+  "query": "aspiradora",
+  "max_pages": 5
+}
+```
+
+El valor de `max_pages` se valida automáticamente para permanecer en el rango permitido.
+
 ### 1. Ve al archivo ubicado en
 
 ```bash

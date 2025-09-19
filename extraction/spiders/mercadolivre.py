@@ -3,18 +3,22 @@ import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
-from config_utils import load_search_query
+from config_utils import load_max_pages, load_search_query
 
 save_path = os.path.join(os.getcwd(), 'data')
 
 class MercadoLivreSpider(scrapy.Spider):
     name = "mercadolivre"
     allowed_domains = ["listado.mercadolibre.com.ar"]
-    start_urls = [f"https://listado.mercadolibre.com.ar/{load_search_query()}"]
 
     page_count = 1
-    max_pages = 20
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        search_query = load_search_query()
+        self.start_urls = [f"https://listado.mercadolibre.com.ar/{search_query}"]
+        self.max_pages = load_max_pages()
+        self.page_count = 1
 
     def parse(self, response):
         products = response.css('div.ui-search-result__wrapper')

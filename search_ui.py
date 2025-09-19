@@ -3,7 +3,7 @@ import sys
 import tkinter as tk
 from tkinter import messagebox
 
-from config_utils import load_search_query, save_search_query
+from config_utils import load_max_pages, load_search_query, save_search_preferences
 
 
 def main() -> None:
@@ -17,12 +17,25 @@ def main() -> None:
     entry.grid(row=1, column=0, padx=10, pady=10)
     entry.focus_set()
 
+    tk.Label(root, text="Cantidad de páginas a rastrear (1-20):").grid(row=2, column=0, padx=10, pady=(0, 0))
+    max_pages_var = tk.IntVar(value=load_max_pages())
+    pages_selector = tk.Spinbox(
+        root,
+        from_=1,
+        to=20,
+        textvariable=max_pages_var,
+        width=5,
+        justify="center",
+    )
+    pages_selector.grid(row=3, column=0, padx=10, pady=5)
+
     def submit(event=None):
         query = search_var.get()
         if not query.strip():
             messagebox.showwarning("Búsqueda inválida", "Por favor ingresa un término de búsqueda.")
             return
-        formatted = save_search_query(query)
+        formatted, selected_pages = save_search_preferences(query, max_pages_var.get())
+        max_pages_var.set(selected_pages)
         try:
             subprocess.run([sys.executable, "crawl.py"], check=True)
         except (FileNotFoundError, subprocess.CalledProcessError) as exc:
@@ -41,7 +54,7 @@ def main() -> None:
         )
 
     button = tk.Button(root, text="Generar búsqueda", command=submit)
-    button.grid(row=2, column=0, padx=10, pady=(0, 5))
+    button.grid(row=4, column=0, padx=10, pady=(0, 5))
 
     def open_dashboard() -> None:
         subprocess.Popen(
@@ -50,7 +63,7 @@ def main() -> None:
         )
 
     dashboard_button = tk.Button(root, text="Ver dashboard", command=open_dashboard)
-    dashboard_button.grid(row=3, column=0, padx=10, pady=(0, 10))
+    dashboard_button.grid(row=5, column=0, padx=10, pady=(0, 10))
 
     entry.bind('<Return>', submit)
 

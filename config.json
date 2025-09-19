@@ -1,3 +1,4 @@
 {
-  "query": "aspiradora"
+  "query": "aspiradora",
+  "max_pages": 20
 }
