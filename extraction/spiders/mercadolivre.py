@@ -22,11 +22,19 @@ class MercadoLivreSpider(scrapy.Spider):
         for product in products:
             # Mercado Livre stores multiple "prices" in this single span
             prices = product.css('span.andes-money-amount__fraction::text').getall()
+            cents = product.css('span.andes-money-amount__cents::text').get()
+
+            price_value = None
+            if prices:
+                cents_value = cents.strip() if cents else "00"
+                # Ensure the cents portion always contains two digits
+                cents_value = cents_value.zfill(2)
+                price_value = f"{prices[0]},{cents_value}"
 
             yield {
                 'name': product.css('a.poly-component__title::text').get(),
                 'seller': product.css('span.poly-component__seller::text').get(),
-                'price':prices[0] if len (prices) > 0 else None, 
+                'price': price_value,
                 'reviews_rating_number': product.css('span.poly-reviews__rating::text').get(),
                 'reviews_amount': product.css('span.poly-reviews__total::text').get()
             }
