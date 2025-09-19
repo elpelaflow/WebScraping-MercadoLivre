@@ -24,7 +24,16 @@ def main() -> None:
         messagebox.showinfo("Búsqueda guardada", f"Se configuró la búsqueda: {formatted}")
 
     button = tk.Button(root, text="Guardar búsqueda", command=submit)
-    button.grid(row=2, column=0, padx=10, pady=(0, 10))
+    button.grid(row=2, column=0, padx=10, pady=(0, 5))
+
+    def open_dashboard() -> None:
+        subprocess.Popen(
+            ["streamlit", "run", "dashboard/dashboard.py"],
+            start_new_session=True,
+        )
+
+    dashboard_button = tk.Button(root, text="Ver dashboard", command=open_dashboard)
+    dashboard_button.grid(row=3, column=0, padx=10, pady=(0, 10))
 
     entry.bind('<Return>', submit)
 
