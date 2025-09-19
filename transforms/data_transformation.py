@@ -44,7 +44,12 @@ def standardize_strings(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def price_to_float(df: pd.DataFrame) -> pd.DataFrame:
-  df['price'] = df['price'].astype(float)
+  df['price'] = (
+    df['price']
+    .astype(str)
+    .str.replace(',', '.', regex=False)
+    .astype(float)
+  )
 
   return df
 
