@@ -89,6 +89,13 @@ def transform_data(path_to_data: str = ''):
     path_to_data = ('../data/data.json')
 
   df = read_data(path_to_data)
+  identifying_columns = [
+    column for column in ['name', 'seller', 'price'] if column in df.columns
+  ]
+  if identifying_columns:
+    df = df.drop_duplicates(subset=identifying_columns)
+  else:
+    df = df.drop_duplicates()
   df = add_columns(df)
   df = fill_nulls(df)
   df = normalize_is_ad(df)
