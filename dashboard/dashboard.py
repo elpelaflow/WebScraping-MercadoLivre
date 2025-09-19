@@ -83,17 +83,19 @@ def render_dashboard(df: pd.DataFrame) -> None:
         )
         return
 
+    if "price" in df.columns and df["price"].notna().any():
+        min_available = float(df["price"].min())
+        max_available = float(df["price"].max())
+    else:
+        min_available = 0.0
+        max_available = 0.0
+
     with st.sidebar:
         st.header("Filtros")
-        search_term = st.text_input("Buscar en todos los campos:")
-        if "price" in df.columns and df["price"].notna().any():
-            min_available = float(df["price"].min())
-            max_available = float(df["price"].max())
-        else:
-            min_available = 0.0
-            max_available = 0.0
-        min_price = st.number_input("Precio mínimo", value=min_available, step=100.0)
-        max_price = st.number_input("Precio máximo", value=max_available, step=100.0)
+        with st.expander("Filtros", expanded=False):
+            search_term = st.text_input("Buscar en todos los campos:")
+            min_price = st.number_input("Precio mínimo", value=min_available, step=100.0)
+            max_price = st.number_input("Precio máximo", value=max_available, step=100.0)
 
     total_items = df.shape[0]
     col1, col2 = st.columns(2)
