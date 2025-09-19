@@ -7,6 +7,9 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from config_utils import load_search_query
+from services.domain_discovery import fetch_domain_discovery
+
 DB_PATH = Path("data/database.db")
 JSON_FALLBACK_PATH = Path("data/data.json")
 
@@ -90,12 +93,85 @@ def render_dashboard(df: pd.DataFrame) -> None:
         min_available = 0.0
         max_available = 0.0
 
+    search_term = ""
+    min_price = min_available
+    max_price = max_available
+
     with st.sidebar:
         st.header("Filtros")
-        with st.expander("Filtros", expanded=False):
-            search_term = st.text_input("Buscar en todos los campos:")
-            min_price = st.number_input("Precio mínimo", value=min_available, step=100.0)
-            max_price = st.number_input("Precio máximo", value=max_available, step=100.0)
+        with st.sidebar.expander("🧰 Filtros", expanded=True):
+            # Si ya tenés tabs para Básicos/Avanzados, mantenelos y solo agrega la de Domain Discovery.
+            try:
+                tab_basicos, tab_avanzados, tab_dd = st.tabs(["Básicos", "Avanzados", "Domain Discovery"])
+            except Exception:
+                # Fallback si no existen otras tabs
+                tab_dd, = st.tabs(["Domain Discovery"])
+
+            with tab_dd:
+                q = load_search_query()  # misma búsqueda que definiste en search_ui
+                st.caption(f"Búsqueda actual: **{q}**")
+
+                dd_limit = st.slider("Límite del llamado", 1, 20, 5, key="dd_limit")
+                site = st.selectbox("Site", ["MLA"], index=0, help="Dejalo en MLA salvo que necesites otro")
+
+                @st.cache_data(show_spinner=False, ttl=60*60)
+                def _cached_domain_discovery(query: str, limit: int, site_code: str):
+                    return fetch_domain_discovery(query=query, limit=limit, site=site_code)
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Refrescar"):
+                        _cached_domain_discovery.clear()
+
+                raw = _cached_domain_discovery(q, dd_limit, site)
+
+                st.markdown("**Respuesta (JSON crudo):**")
+                st.json(raw, expanded=False)
+
+                # Vista rápida (si se puede)
+                if isinstance(raw, list) and len(raw) > 0:
+                    import pandas as pd
+                    df_dd = pd.DataFrame(raw)
+                    keep = [c for c in ["domain_id", "domain_name", "category_id", "category_name", "relevance"] if c in df_dd.columns]
+                    if keep:
+                        st.markdown("**Vista rápida (tabla):**")
+                        st.dataframe(df_dd[keep], use_container_width=True, hide_index=True)
+
+                # URL de ejemplo para copiar/pegar
+                import urllib.parse
+                url_example = "https://api.mercadolibre.com/sites/{}/domain_discovery/search?q={}&limit={}".format(
+                    site, urllib.parse.quote_plus(q or ""), dd_limit
+                )
+                st.code(f"GET {url_example}", language="bash")
+
+                # (Opcional) Filtrar dataset principal por categoría sugerida si df existe en este scope:
+                try:
+                    if isinstance(raw, list) and len(raw) > 0 and "category_id" in df.columns:
+                        sugeridas = pd.DataFrame(raw)
+                        if "category_id" in sugeridas.columns:
+                            opciones = (
+                                (sugeridas["category_name"].fillna("") + " (" + sugeridas["category_id"] + ")")
+                                if "category_name" in sugeridas.columns
+                                else sugeridas["category_id"]
+                            ).dropna().drop_duplicates().tolist()
+                            choice = st.selectbox("Filtrar dataset por categoría sugerida", ["(ninguna)"] + opciones)
+                            if choice != "(ninguna)":
+                                cat_elegida = choice.split("(")[-1].rstrip(")")
+                                df = df[df["category_id"] == cat_elegida]
+                    elif isinstance(raw, list) and len(raw) > 0 and "category_id" not in (df.columns if 'df' in locals() else []):
+                        st.warning("Tu dataset no incluye 'category_id'. Extraelo en el spider y guardalo para poder filtrar por categoría.")
+                except Exception:
+                    pass
+
+            if "tab_basicos" in locals():
+                with tab_basicos:
+                    search_term = st.text_input("Buscar en todos los campos:")
+                    min_price = st.number_input("Precio mínimo", value=min_available, step=100.0)
+                    max_price = st.number_input("Precio máximo", value=max_available, step=100.0)
+            else:
+                search_term = st.text_input("Buscar en todos los campos:")
+                min_price = st.number_input("Precio mínimo", value=min_available, step=100.0)
+                max_price = st.number_input("Precio máximo", value=max_available, step=100.0)
 
     total_items = df.shape[0]
     col1, col2 = st.columns(2)
