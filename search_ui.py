@@ -1,7 +1,9 @@
+import subprocess
+import sys
 import tkinter as tk
 from tkinter import messagebox
 
-from config_utils import save_search_query, load_search_query
+from config_utils import load_search_query, save_search_query
 
 
 def main() -> None:
@@ -10,7 +12,7 @@ def main() -> None:
 
     tk.Label(root, text="Ingresa tu búsqueda:").grid(row=0, column=0, padx=10, pady=(10, 0))
 
-    search_var = tk.StringVar(value=load_search_query())
+    search_var = tk.StringVar(value=load_search_query().replace("-", " "))
     entry = tk.Entry(root, textvariable=search_var, width=40)
     entry.grid(row=1, column=0, padx=10, pady=10)
     entry.focus_set()
@@ -21,9 +23,24 @@ def main() -> None:
             messagebox.showwarning("Búsqueda inválida", "Por favor ingresa un término de búsqueda.")
             return
         formatted = save_search_query(query)
-        messagebox.showinfo("Búsqueda guardada", f"Se configuró la búsqueda: {formatted}")
+        try:
+            subprocess.run([sys.executable, "crawl.py"], check=True)
+        except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+            messagebox.showerror(
+                "Error al generar búsqueda",
+                "Ocurrió un error al ejecutar el proceso de extracción."
+                + (f"\nCódigo de salida: {exc.returncode}" if isinstance(exc, subprocess.CalledProcessError) else ""),
+            )
+            return
 
-    button = tk.Button(root, text="Guardar búsqueda", command=submit)
+        search_var.set(query.strip())
+        messagebox.showinfo(
+            "Búsqueda generada",
+            "Se configuró la búsqueda y se generó la información"
+            f" para: {search_var.get() or formatted.replace('-', ' ')}",
+        )
+
+    button = tk.Button(root, text="Generar búsqueda", command=submit)
     button.grid(row=2, column=0, padx=10, pady=(0, 5))
 
     def open_dashboard() -> None:
