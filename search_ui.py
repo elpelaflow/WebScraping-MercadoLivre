@@ -57,10 +57,17 @@ def main() -> None:
     button.grid(row=4, column=0, padx=10, pady=(0, 5))
 
     def open_dashboard() -> None:
-        subprocess.Popen(
-            ["streamlit", "run", "dashboard/dashboard.py"],
-            start_new_session=True,
-        )
+        try:
+            subprocess.Popen(
+                [sys.executable, "-m", "streamlit", "run", "dashboard/dashboard.py"],
+                start_new_session=True,
+            )
+        except FileNotFoundError:
+            messagebox.showerror(
+                "Streamlit no encontrado",
+                "No se pudo ejecutar Streamlit con el intérprete actual. "
+                "Por favor, verifica la instalación del paquete Streamlit en este entorno.",
+            )
 
     dashboard_button = tk.Button(root, text="Ver dashboard", command=open_dashboard)
     dashboard_button.grid(row=5, column=0, padx=10, pady=(0, 10))

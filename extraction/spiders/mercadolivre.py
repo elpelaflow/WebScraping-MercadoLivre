@@ -1,4 +1,6 @@
 import os
+import re
+
 import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
@@ -9,7 +11,7 @@ save_path = os.path.join(os.getcwd(), 'data')
 
 class MercadoLivreSpider(scrapy.Spider):
     name = "mercadolivre"
-    allowed_domains = ["listado.mercadolibre.com.ar"]
+    allowed_domains = ["listado.mercadolibre.com.ar", "www.mercadolibre.com.ar"]
 
     page_count = 1
 
@@ -21,49 +23,74 @@ class MercadoLivreSpider(scrapy.Spider):
         self.page_count = 1
 
     def parse(self, response):
-        products = response.css('div.ui-search-result__wrapper')
+        products = response.css("li.ui-search-layout__item")
+        if not products:
+            products = response.css("div.ui-search-result__wrapper, [data-testid='item']")
 
         for product in products:
-            # Mercado Livre stores multiple "prices" in this single span
-            prices = product.css('span.andes-money-amount__fraction::text').getall()
-            cents = product.css('span.andes-money-amount__cents::text').get()
+            link = product.css(
+                "a.ui-search-item__group__element::attr(href), "
+                "a.ui-search-link::attr(href), "
+                "a.poly-component__link::attr(href), "
+                "a::attr(href)"
+            ).get()
+            permalink = response.urljoin(link) if link else None
+            ml_item_id = None
+            if link:
+                match = re.search(r"/MLA-?(\d+)", link)
+                if match:
+                    ml_item_id = f"MLA{match.group(1)}"
 
-            ad_text_candidates = product.css(
-                '.ui-search-item__ad-label::text, '
-                '.ui-search-item__ad-badge::text, '
-                '.ui-search-item__highlight-label::text, '
-                '.poly-component__label::text, '
-                '[data-testid="listing-highlight-label"]::text, '
-                '[data-testid="listing-type-highlight"]::text'
+            name = product.css(
+                "h2.ui-search-item__title::text, "
+                "h2.ui-search-item__title span::text, "
+                "a.poly-component__title::text, "
+                "[data-testid='item-title']::text"
+            ).get()
+            name = name.strip() if name else None
+
+            seller_texts = product.css(
+                "[data-testid='seller-info'] ::text, "
+                "span.poly-component__seller::text, "
+                "span.ui-search-official-store-label__text::text"
             ).getall()
+            seller = "".join(seller_texts).strip() if seller_texts else None
+            if seller and seller.lower().startswith("por "):
+                seller = seller[4:].strip()
 
-            ad_texts = [candidate.strip() for candidate in ad_text_candidates if candidate and candidate.strip()]
-            is_ad = any('promocion' in text.lower() for text in ad_texts) or bool(ad_texts)
-
+            fraction = product.css("span.andes-money-amount__fraction::text").get()
+            cents = product.css("span.andes-money-amount__cents::text").get()
             price_value = None
-            if prices:
+            if fraction:
                 cents_value = cents.strip() if cents else "00"
-                # Ensure the cents portion always contains two digits
                 cents_value = cents_value.zfill(2)
-                price_value = f"{prices[0]},{cents_value}"
+                price_value = f"{fraction},{cents_value}"
+
+            ad_markers = product.css(
+                "[data-testid*='advertising'], "
+                "[aria-label*='Promocionado' i], "
+                "[data-testid*='sponsored'], "
+                "[data-testid='listing-type-highlight']::text, "
+                "[data-testid='listing-highlight-label']::text, "
+                ".ui-search-item__ad-badge::text"
+            ).getall()
+            ad_texts = [marker.strip() for marker in ad_markers if marker and marker.strip()]
+            is_ad = bool(ad_texts)
 
             yield {
-                'name': product.css('a.poly-component__title::text').get(),
-                'seller': product.css('span.poly-component__seller::text').get(),
-                'price': price_value,
-                'reviews_rating_number': product.css('span.poly-reviews__rating::text').get(),
-                'reviews_amount': product.css('span.poly-reviews__total::text').get(),
-                'is_ad': is_ad
+                "ml_item_id": ml_item_id,
+                "name": name,
+                "seller": seller,
+                "price": price_value,
+                "permalink": permalink,
+                "is_ad": is_ad,
             }
 
         if self.page_count < self.max_pages:
-            # 48 is the amount of items shown on a given page
-            offset = 48 * self.page_count
-            base_url = response.url.split('_Desde_')[0]
-            next_page = f"{base_url}_Desde_{offset}"
+            next_page = response.css("a[rel='next']::attr(href), a[title='Siguiente']::attr(href)").get()
             if next_page:
                 self.page_count += 1
-                yield scrapy.Request(url=next_page, callback=self.parse)
+                yield response.follow(next_page, callback=self.parse)
 
 
     def run_spider():
