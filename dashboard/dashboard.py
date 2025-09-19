@@ -19,8 +19,8 @@ def get_df_from_db(db_path: str) -> pd.DataFrame:
 
 
 def get_dashboard(df: pd.DataFrame):
-    st.title("Scraping Results from Mercado Livre")
-    st.subheader("By Heitor Nolla")
+    st.title("Scraping Results from Mercado Libre")
+    st.subheader("By Pela Flow")
 
     col1, col2 = st.columns(2)
 
@@ -28,7 +28,7 @@ def get_dashboard(df: pd.DataFrame):
     col1.metric(label="Total Items Found", value=total_itens)
 
     avg_price = df['price'].mean()
-    col2.metric(label="Average BRL Price", value=f"{avg_price:.2f}")
+    col2.metric(label="Average ARS Price", value=f"{avg_price:.2f}")
 
     st.markdown("### All Items")
 
