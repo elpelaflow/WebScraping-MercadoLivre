@@ -22,6 +22,15 @@ def get_dashboard(df: pd.DataFrame):
     st.title("Scraping Results from Mercado Libre")
     st.subheader("By Pela Flow")
 
+    if 'is_ad' in df.columns:
+        show_ads = st.checkbox("Incluir promocionados", value=False)
+        only_ads = st.checkbox("Ver SOLO promocionados", value=False)
+
+        if only_ads:
+            df = df[df['is_ad'] == 1]
+        elif not show_ads:
+            df = df[df['is_ad'] == 0]
+
     col1, col2 = st.columns(2)
 
     total_itens = df.shape[0]

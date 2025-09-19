@@ -30,15 +30,33 @@ def add_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def fill_nulls(df: pd.DataFrame) -> pd.DataFrame:
-  df['price'] = df['price'].fillna('0')
-  df['reviews_rating_number'] = df['reviews_rating_number'].fillna('0')
-  df['reviews_amount'] = df['reviews_amount'].fillna('(0)')
+  if 'price' in df.columns:
+    df['price'] = df['price'].fillna('0')
+  if 'reviews_rating_number' in df.columns:
+    df['reviews_rating_number'] = df['reviews_rating_number'].fillna('0')
+  if 'reviews_amount' in df.columns:
+    df['reviews_amount'] = df['reviews_amount'].fillna('(0)')
+  if 'is_ad' in df.columns:
+    df['is_ad'] = df['is_ad'].fillna(0)
 
   return df
 
 def standardize_strings(df: pd.DataFrame) -> pd.DataFrame:
   df['price'] = df['price'].astype(str).str.replace('.', '', regex=False)
   df['reviews_amount'] = df['reviews_amount'].astype(str).str.strip('()')
+
+  return df
+
+
+def normalize_is_ad(df: pd.DataFrame) -> pd.DataFrame:
+  if 'is_ad' in df.columns:
+    df['is_ad'] = (
+      df['is_ad']
+      .astype(str)
+      .str.lower()
+      .isin(['true', '1', 'yes'])
+      .astype(int)
+    )
 
   return df
 
@@ -73,6 +91,7 @@ def transform_data(path_to_data: str = ''):
   df = read_data(path_to_data)
   df = add_columns(df)
   df = fill_nulls(df)
+  df = normalize_is_ad(df)
   df = standardize_strings(df)
   df = price_to_float(df)
   save_to_sqlite3(df)

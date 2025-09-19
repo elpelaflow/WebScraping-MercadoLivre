@@ -24,6 +24,9 @@ class MercadoLivreSpider(scrapy.Spider):
             prices = product.css('span.andes-money-amount__fraction::text').getall()
             cents = product.css('span.andes-money-amount__cents::text').get()
 
+            ad_label = product.css('.ui-search-item__ad-label::text, .ui-search-item__ad-badge::text').get()
+            is_ad = bool(ad_label and ad_label.strip())
+
             price_value = None
             if prices:
                 cents_value = cents.strip() if cents else "00"
@@ -36,7 +39,8 @@ class MercadoLivreSpider(scrapy.Spider):
                 'seller': product.css('span.poly-component__seller::text').get(),
                 'price': price_value,
                 'reviews_rating_number': product.css('span.poly-reviews__rating::text').get(),
-                'reviews_amount': product.css('span.poly-reviews__total::text').get()
+                'reviews_amount': product.css('span.poly-reviews__total::text').get(),
+                'is_ad': is_ad
             }
 
         if self.page_count < self.max_pages:
