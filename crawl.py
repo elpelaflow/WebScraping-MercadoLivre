@@ -1,21 +1,25 @@
-import os
 import datetime
+from pathlib import Path
 
 from extraction.spiders.mercadolivre import MercadoLivreSpider
 from transforms.data_transformation import transform_data
 
-def main():   
-    # Check if data.json exists
-    data_path = os.path.abspath('data/data.json')
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
 
-    if os.path.exists(data_path):
+
+def main():
+    # Check if data.json exists
+    data_path = DATA_DIR / "data.json"
+
+    if data_path.exists():
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        new_name = f"data/data_{timestamp}.json"
-        os.rename(data_path, new_name)
+        new_name = DATA_DIR / f"data_{timestamp}.json"
+        data_path.rename(new_name)
         print(f"Renamed existing data.json to data_{timestamp}.json")
     
     MercadoLivreSpider.run_spider()
-    transform_data('data/data.json')
+    transform_data(DATA_DIR / "data.json")
 
 
 if __name__ == "__main__":

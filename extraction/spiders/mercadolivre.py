@@ -1,5 +1,5 @@
-import os
 import re
+from pathlib import Path
 
 import scrapy
 from scrapy.crawler import CrawlerProcess
@@ -7,7 +7,7 @@ from scrapy.utils.project import get_project_settings
 
 from config_utils import load_max_pages, load_search_query
 
-save_path = os.path.join(os.getcwd(), 'data')
+DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 class MercadoLivreSpider(scrapy.Spider):
     name = "mercadolivre"
@@ -94,11 +94,11 @@ class MercadoLivreSpider(scrapy.Spider):
 
 
     def run_spider():
-        os.makedirs(save_path, exist_ok=True)
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
         process = CrawlerProcess(settings={
             **get_project_settings(),
             "FEEDS": {
-                os.path.join(save_path, 'data.json'): {
+                str(DATA_DIR / "data.json"): {
                     "format": "json",
                     "overwrite": True,
                 }

@@ -1,21 +1,27 @@
-import os
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 
 from config_utils import load_search_query
 
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
-def read_data(path_to_data: str = "") -> pd.DataFrame:
+
+def read_data(path_to_data: Path | str = "") -> pd.DataFrame:
     if not path_to_data:
-        json_files = sorted(file for file in os.listdir("data") if file.endswith(".json"))
+        json_files = sorted(DATA_DIR.glob("*.json"))
         if not json_files:
             return pd.DataFrame()
-        path_to_data = os.path.join("data", json_files[-1])
+        data_path = json_files[-1]
+    else:
+        data_path = Path(path_to_data)
+        if not data_path.is_absolute():
+            data_path = DATA_DIR / data_path.name
 
     try:
-        return pd.read_json(path_to_data)
+        return pd.read_json(data_path)
     except ValueError:
         print("Error while loading data")
         return pd.DataFrame()
@@ -78,13 +84,13 @@ def price_to_float(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_to_sqlite3(df: pd.DataFrame) -> None:
-    with sqlite3.connect("data/database.db") as connection:
+    with sqlite3.connect(str(DATA_DIR / "database.db")) as connection:
         df.to_sql("mercadolivre_items", connection, if_exists="replace", index=False)
 
 
-def transform_data(path_to_data: str = "") -> None:
+def transform_data(path_to_data: Path | str = "") -> None:
     if not path_to_data:
-        path_to_data = "../data/data.json"
+        path_to_data = DATA_DIR / "data.json"
 
     df = read_data(path_to_data)
     if df.empty:
@@ -105,4 +111,4 @@ def transform_data(path_to_data: str = "") -> None:
 
 
 if __name__ == "__main__":
-    transform_data("../data/data.json")
+    transform_data(DATA_DIR / "data.json")
